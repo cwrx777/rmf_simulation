@@ -26,6 +26,7 @@
 #include <rmf_door_msgs/msg/door_mode.hpp>
 #include <rmf_door_msgs/msg/door_state.hpp>
 #include <rmf_door_msgs/msg/door_request.hpp>
+#include <rmf_building_sim_msgs/msg/lift_mode_override.hpp>
 
 #include "utils.hpp"
 
@@ -40,6 +41,7 @@ using LiftRequest = rmf_lift_msgs::msg::LiftRequest;
 using DoorRequest = rmf_door_msgs::msg::DoorRequest;
 using DoorState = rmf_door_msgs::msg::DoorState;
 using DoorMode = rmf_door_msgs::msg::DoorMode;
+using LiftModeOverride = rmf_building_sim_msgs::msg::LiftModeOverride;
 
 //==============================================================================
 class LiftCommon
@@ -77,6 +79,7 @@ private:
   rclcpp::Publisher<DoorRequest>::SharedPtr _door_request_pub;
   rclcpp::Subscription<LiftRequest>::SharedPtr _lift_request_sub;
   rclcpp::Subscription<DoorState>::SharedPtr _door_state_sub;
+  rclcpp::Subscription<LiftModeOverride>::SharedPtr _lift_mode_override_sub;
 
   std::string _lift_name;
   std::string _cabin_joint_name;
@@ -99,6 +102,10 @@ private:
   double _last_update_time = 0.0;
   // random start time offset to prevent state message crossfire
   double _last_pub_time = ((double) std::rand()) / ((double) (RAND_MAX));
+
+  bool _is_mode_overriden = false;
+  uint8_t _overriden_mode = 0;
+  uint8_t _previous_mode = 0;
 
   void publish_door_request(const double time, std::string door_name,
     uint32_t door_state);

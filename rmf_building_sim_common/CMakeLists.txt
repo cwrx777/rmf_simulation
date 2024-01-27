@@ -22,6 +22,7 @@ find_package(rclcpp REQUIRED)
 find_package(rmf_door_msgs REQUIRED)
 find_package(rmf_lift_msgs REQUIRED)
 find_package(rmf_building_map_msgs REQUIRED)
+find_package(rmf_building_sim_msgs REQUIRED)
 find_package(menge_vendor REQUIRED)
 
 include(GNUInstallDirs)
@@ -69,6 +70,7 @@ ament_target_dependencies(lift_common
    rclcpp
    rmf_door_msgs
    rmf_lift_msgs
+   rmf_building_sim_msgs
 )
 
 target_include_directories(lift_common
@@ -118,6 +120,7 @@ ament_export_dependencies(
   rmf_door_msgs
   rmf_lift_msgs
   rmf_building_map_msgs
+  rmf_building_sim_msgs
   menge_vendor
 )
 

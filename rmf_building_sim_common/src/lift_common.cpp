@@ -216,6 +216,28 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
       if (msg->lift_name != _lift_name)
         return;
 
+
+      //https://github.com/open-rmf/rmf_simulation/pull/115
+      if (msg->request_type == LiftRequest::REQUEST_END_SESSION)
+      {
+        if (_lift_state.session_id.empty())
+        {
+          // Redundant end session request, just ignore it
+          return;
+        }
+
+        if (msg->session_id == _lift_state.session_id)
+        {
+          RCLCPP_INFO(
+            logger(),
+            "Ending lift session [%s] for lift [%s]",
+            _lift_state.session_id.c_str(),
+            _lift_name.c_str());
+          _lift_request = std::move(msg);
+          return;
+        }
+      }
+
       if (_floor_name_to_elevation.find(
         msg->destination_floor) == _floor_name_to_elevation.end())
       {
@@ -242,8 +264,61 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
 
       _lift_request = std::move(msg);
       RCLCPP_INFO(logger(),
-      "Lift [%s] requested at level [%s]",
-      _lift_name.c_str(), _lift_request->destination_floor.c_str());
+      "Lift [%s] requested at level [%s] by [%s]",
+      _lift_name.c_str(), _lift_request->destination_floor.c_str(),
+      _lift_request->session_id.c_str());
+    });
+
+  _lift_mode_override_sub = _ros_node->create_subscription<LiftModeOverride>(
+    "/lift_mode_override", rclcpp::SystemDefaultsQoS(),
+    [&](LiftModeOverride::SharedPtr msg)
+    {
+      if (msg->lift_name != _lift_name)
+        return;
+
+      //if there is an ongoing lift_request, dont allow overidde
+      if (_lift_request &&
+      _lift_request->request_type != LiftRequest::REQUEST_END_SESSION)
+      {
+        RCLCPP_INFO(logger(),
+        "Discarding override: [%s] mode is [%d], with session_id [%s]",
+        _lift_name.c_str(),
+        _lift_request->request_type,
+        _lift_request->session_id.c_str());
+
+        return;
+      }
+
+      //if currently it is not overriden
+      if (!_is_mode_overriden && msg->is_override_enabled)
+      {
+        _previous_mode = _lift_state.current_mode;
+        _is_mode_overriden = true;
+        _overriden_mode = msg->override_mode;
+
+        RCLCPP_INFO(logger(),
+        "Lift [%s] mode has been overriden to [%d]",
+        _lift_name.c_str(), _overriden_mode);
+      }
+      //if currently it is already overriden
+      else if (_is_mode_overriden && msg->is_override_enabled)
+      {
+        _overriden_mode = msg->override_mode;
+
+        RCLCPP_INFO(logger(),
+        "Lift [%s] mode has been overriden to [%d]",
+        _lift_name.c_str(), _overriden_mode);
+      }
+      //remove override
+      else
+      {
+        _lift_state.current_mode = _previous_mode;
+        _is_mode_overriden = false;
+
+        RCLCPP_INFO(logger(),
+        "Lift [%s] mode is no longer overriden.",
+        _lift_name.c_str());
+      }
     });
 
   _door_state_sub = _ros_node->create_subscription<DoorState>(
@@ -276,6 +351,12 @@ void LiftCommon::pub_lift_state(const double time)
     static_cast<uint32_t>((time-static_cast<double>(t_sec)) *1e9);
   const rclcpp::Time now{t_sec, t_nsec, RCL_ROS_TIME};
   _lift_state.lift_time = now;
+
+  if (_is_mode_overriden)
+  {
+    _lift_state.current_mode = _overriden_mode;
+  }
+
   _lift_state_pub->publish(_lift_state);
 }
 
@@ -300,9 +381,17 @@ LiftCommon::LiftUpdateResult LiftCommon::update(const double time,
     std::string desired_floor = _lift_request->destination_floor;
     uint8_t desired_door_state = _lift_request->door_state;
     if (_lift_request->request_type == LiftRequest::REQUEST_END_SESSION)
+    {
       _lift_state.session_id = "";
+
+      //https://github.com/open-rmf/rmf_simulation/pull/115
+      _lift_request = nullptr;
+
+    }
     else
+    {
       _lift_state.session_id = _lift_request->session_id;
+    }
 
     if ((_lift_state.current_floor == desired_floor) &&
       (_lift_state.door_state == desired_door_state) &&
@@ -348,6 +437,7 @@ LiftCommon::LiftUpdateResult LiftCommon::update(const double time,
       }
     }
   }
+
   // Publish lift state at 1 Hz
   if (time - _last_pub_time >= 1.0)
     pub_lift_state(time);
