@@ -297,8 +297,8 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
         _overriden_mode = msg->override_mode;
 
         RCLCPP_INFO(logger(),
-        "Lift [%s] mode has been overriden to [%d]",
-        _lift_name.c_str(), _overriden_mode);
+        "Lift [%s] mode has been overriden from [%d] to [%d]",
+        _lift_name.c_str(), _previous_mode, _overriden_mode);
       }
       //if currently it is already overriden
       else if (_is_mode_overriden && msg->is_override_enabled)
@@ -306,8 +306,12 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
         _overriden_mode = msg->override_mode;
 
         RCLCPP_INFO(logger(),
-        "Lift [%s] mode has been overriden to [%d]",
+        "Lift [%s] override mode has been updated to [%d]",
         _lift_name.c_str(), _overriden_mode);
+      }
+      else if(!_is_mode_overriden && !msg->is_override_enabled)
+      {
+        //ignore
       }
       //remove override
       else
@@ -316,8 +320,8 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
         _is_mode_overriden = false;
 
         RCLCPP_INFO(logger(),
-        "Lift [%s] mode is no longer overriden.",
-        _lift_name.c_str());
+        "Lift [%s] mode is no longer overriden. current mode is [%d]",
+        _lift_name.c_str(), _lift_state.current_mode);
       }
     });
 
