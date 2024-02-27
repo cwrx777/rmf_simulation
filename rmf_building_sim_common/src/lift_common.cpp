@@ -295,10 +295,12 @@ LiftCommon::LiftCommon(rclcpp::Node::SharedPtr node,
         _previous_mode = _lift_state.current_mode;
         _is_mode_overriden = true;
         _overriden_mode = msg->override_mode;
+        //session id to be something
+        _session_id = msg->session_id;
 
         RCLCPP_INFO(logger(),
-        "Lift [%s] mode has been overriden from [%d] to [%d]",
-        _lift_name.c_str(), _previous_mode, _overriden_mode);
+        "Lift [%s] mode has been overriden from [%d] to [%d] with session id [%s]",
+        _lift_name.c_str(), _previous_mode, _overriden_mode, _session_id.c_str());
       }
       //if currently it is already overriden
       else if (_is_mode_overriden && msg->is_override_enabled)
@@ -359,6 +361,8 @@ void LiftCommon::pub_lift_state(const double time)
   if (_is_mode_overriden)
   {
     _lift_state.current_mode = _overriden_mode;
+    //publish session id
+    _lift_state.session_id = "AGV45123546";
   }
 
   _lift_state_pub->publish(_lift_state);

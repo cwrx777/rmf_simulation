@@ -10,3 +10,5 @@ uint8 MODE_AGV=2
 uint8 MODE_FIRE=3
 uint8 MODE_OFFLINE=4
 uint8 MODE_EMERGENCY=5
+
+string session_id

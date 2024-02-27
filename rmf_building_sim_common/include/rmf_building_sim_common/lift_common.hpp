@@ -106,6 +106,7 @@ private:
   bool _is_mode_overriden = false;
   uint8_t _overriden_mode = 0;
   uint8_t _previous_mode = 0;
+  std::string _session_id = "";
 
   void publish_door_request(const double time, std::string door_name,
     uint32_t door_state);
